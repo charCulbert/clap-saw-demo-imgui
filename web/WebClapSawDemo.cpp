@@ -84,13 +84,7 @@ int32_t WebClapSawDemo::webviewGetUri(char* uri, uint32_t capacity) const noexce
 bool WebClapSawDemo::webviewGetResource(const char* path, char* mime, uint32_t mimeCapacity,
                                         const clap_ostream* stream)
 {
-    if (!ui.getResource(path, mime, mimeCapacity, stream)) return false;
-    // WebUI's pinned MIME table predates Wasm interfaces.
-    const std::string_view resource(path);
-    if (resource.size() >= 5 && resource.substr(resource.size() - 5) == ".wasm"
-        && mime && mimeCapacity)
-        std::snprintf(mime, mimeCapacity, "%s", "application/wasm");
-    return true;
+    return ui.getResource(path, mime, mimeCapacity, stream);
 }
 
 bool WebClapSawDemo::webviewReceive(const void* buffer, uint32_t size) const noexcept

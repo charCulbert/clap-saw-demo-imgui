@@ -33,8 +33,9 @@ add_custom_target(clap-saw-ui DEPENDS
 
 add_executable(clap-saw-wclap
     src/clap-saw-demo.cpp src/saw-voice.cpp web/WebClapSawDemo.cpp web/Entry.cpp)
-target_link_libraries(clap-saw-wclap PRIVATE clap clap-helpers char-clap-utils::char-clap-utils)
-target_include_directories(clap-saw-wclap PRIVATE src libs/readerwriterqueue)
+target_link_libraries(clap-saw-wclap PRIVATE clap clap-helpers)
+target_include_directories(clap-saw-wclap PRIVATE
+    src libs/readerwriterqueue "${char_clap_utils_SOURCE_DIR}/include")
 target_compile_definitions(clap-saw-wclap PRIVATE CLAP_SAW_WEB=1)
 target_compile_options(clap-saw-wclap PRIVATE -msimd128 -fno-exceptions
     -include "${CMAKE_SOURCE_DIR}/web/WasiReaderWriterQueue.h")

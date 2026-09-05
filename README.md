@@ -40,16 +40,15 @@ open build/clap-saw-demo-imgui.xcodeproj
 ```
 
 
-## WCLAP with a Wasm ImGui interface
+## WCLAP
 
-The native build above keeps upstream's native renderer and pinned dependencies.
-The same editor controls and synth sources also build for the browser. Native
-window attachment lives in `src/clap-saw-demo-gui.cpp`; `web/` adapts the existing
-editor queues to WebView messages between the separate DSP and GUI Wasm modules.
-Resource serving, message transport and GUI lifecycle use `char_clap::WebUI`,
-with a local Wasm MIME override for the pinned helper version.
+This fork also builds for WCLAP, using the same synth and ImGui editor in the
+browser. The native Windows and macOS builds work as before.
 
-Install WASI SDK with pthread support and put Emscripten's `em++` on `PATH`, then:
+### Build
+
+You need Ninja, WASI SDK with pthread support, and Emscripten's `em++` on `PATH`.
+Set `WASI_SDK_PATH` to your SDK directory, then run:
 
 ```sh
 cmake -S . -B build/wclap -G Ninja -DCMAKE_BUILD_TYPE=Release \
@@ -57,15 +56,27 @@ cmake -S . -B build/wclap -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build build/wclap
 ```
 
-Load `build/wclap/artifacts/clap-saw-demo-imgui.wclap.tar.gz` in a WCLAP host.
-The host needs WASI/shared-memory WCLAP support, `clap.webview/3` resource loading
-and binary messaging, the `clap.gui` `webview` lifecycle, parameter flushing and
-main-thread callbacks. The browser must support Wasm and WebGL2; the interface
-is a web UI and needs no native ImGui support from the host.
-Verified in WCLAP Browser DAW. Upstream's [browser-test-host at b42ade6](https://github.com/WebCLAP/browser-test-host/blob/b42ade615bef2c989f96400a7b0b2ef15cabd396/clap-audionode/clap-audioworkletprocessor.mjs#L282-L284)
-leaves the GUI lifecycle unimplemented and needs host-side changes for this build.
+Load `build/wclap/artifacts/clap-saw-demo-imgui.wclap.tar.gz` in your host.
 
-The web build downloads pinned CLAP, clap-helpers and char-clap-utils dependencies;
-it does not change the native dependency pins. Browser gamepad navigation is not supported.
-For native builds with CMake 4, also pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`
-for upstream's older readerwriterqueue CMake file.
+The build downloads pinned dependencies, including
+[char-clap-utils](https://github.com/charCulbert/char-clap-utils).
+Native dependencies are unchanged.
+
+### Host support
+
+Verified in WCLAP Browser DAW. The ImGui interface runs as Wasm with WebGL2;
+the host does not need native ImGui support.
+
+The host must support:
+
+- WCLAP with WASI and shared memory.
+- `clap.webview/3` resource loading and binary messages.
+- `clap.gui` creation, attachment, showing and hiding via the `webview` API.
+- Parameter flushing and main-thread callbacks.
+
+Upstream's [browser-test-host at b42ade6](https://github.com/WebCLAP/browser-test-host/blob/b42ade615bef2c989f96400a7b0b2ef15cabd396/clap-audionode/clap-audioworkletprocessor.mjs#L282-L284)
+does not yet implement that GUI lifecycle, so it needs changes to run this build.
+Browser gamepad navigation is not supported.
+
+For native builds with CMake 4, add `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`
+to the configure command for upstream's older readerwriterqueue dependency.

@@ -11,8 +11,6 @@ FetchContent_Declare(web_clap_helpers
     GIT_SUBMODULES "")
 FetchContent_Declare(char_clap_utils
     GIT_REPOSITORY https://github.com/charCulbert/char-clap-utils.git
-    GIT_TAG abd2149b2978264f379e7d1c348f75016d278c2f
+    GIT_TAG ff3e152bf46a5c07c747b0dea63081fcca10b002
     GIT_SUBMODULES "")
-# Native releases use upstream's Metal/DX12 editor, not the optional WKWebView backend.
-set(CHAR_CLAP_UTILS_NATIVE_WEBVIEW OFF)
 FetchContent_MakeAvailable(web_clap web_clap_helpers char_clap_utils)
