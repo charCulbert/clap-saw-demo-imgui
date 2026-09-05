@@ -4,9 +4,6 @@
 #include <array>
 #include <cstring>
 #include <cmath>
-#include <fstream>
-#include <iterator>
-#include <vector>
 
 namespace sst::clap_saw_demo
 {
@@ -33,34 +30,23 @@ constexpr std::array<clap_id, ClapSawDemo::nParams> parameterIds {
     ClapSawDemo::pmFilterMode,
 };
 
-std::string resourceRoot;
-
-const char* mediaTypeFor(const std::string& path)
-{
-    const auto extension = path.substr(path.find_last_of('.') + 1);
-    if (extension == "js") return "text/javascript";
-    if (extension == "wasm") return "application/wasm";
-    if (extension == "txt") return "text/plain";
-    return "text/html";
-}
-
 } // namespace
 
 struct ClapSawDemoEditor
 {
-    uint32_t width = 540;
-    uint32_t height = 324;
+    char_clap::WebUI& ui;
     bool parented = false;
-    bool visible = false;
 };
 
 WebClapSawDemo::WebClapSawDemo(const clap_host* hostIn)
-    : ClapSawDemo(hostIn), host(hostIn)
+    : ClapSawDemo(hostIn), host(hostIn),
+      ui(hostIn, [this](std::string_view message) { return receiveMessage(message); })
 {
     hostParams = static_cast<const clap_host_params*>(host->get_extension(host, CLAP_EXT_PARAMS));
-    hostWebview = static_cast<const clap_host_webview*>(
-        host->get_extension(host, CLAP_EXT_WEBVIEW));
 }
+
+// The editor borrows ui; release it before the derived members are destroyed.
+WebClapSawDemo::~WebClapSawDemo() { guiDestroy(); }
 
 clap_process_status WebClapSawDemo::process(const clap_process* processIn) noexcept
 {
@@ -105,36 +91,31 @@ void WebClapSawDemo::onMainThread() noexcept
 
 int32_t WebClapSawDemo::webviewGetUri(char* uri, uint32_t capacity) const noexcept
 {
-    constexpr char path[] = "/ui/index.html";
-    if (uri && capacity) std::snprintf(uri, capacity, "%s", path);
-    return sizeof(path);
+    return ui.getUri(uri, capacity);
 }
 
 bool WebClapSawDemo::webviewGetResource(const char* path, char* mime, uint32_t mimeCapacity,
                                         const clap_ostream* stream)
 {
-    if (!path || !stream || std::strstr(path, "..")) return false;
-    std::string relative = path;
-    while (!relative.empty() && relative.front() == '/') relative.erase(relative.begin());
-    if (relative.empty()) return false;
-
-    auto filePath = resourceRoot + "/" + relative;
-#if defined(__wasi__)
-    if (!filePath.empty() && filePath.front() == '/') filePath.erase(filePath.begin());
-#endif
-    std::ifstream input(filePath, std::ios::binary);
-    if (!input) return false;
-    std::vector<uint8_t> bytes(std::istreambuf_iterator<char>(input), {});
-    if (mime && mimeCapacity)
-        std::snprintf(mime, mimeCapacity, "%s", mediaTypeFor(relative));
-    return bytes.empty() || stream->write(stream, bytes.data(), bytes.size())
-        == static_cast<int64_t>(bytes.size());
+    if (!ui.getResource(path, mime, mimeCapacity, stream)) return false;
+    // WebUI's pinned MIME table predates Wasm interfaces.
+    const std::string_view resource(path);
+    if (resource.size() >= 5 && resource.substr(resource.size() - 5) == ".wasm"
+        && mime && mimeCapacity)
+        std::snprintf(mime, mimeCapacity, "%s", "application/wasm");
+    return true;
 }
 
 bool WebClapSawDemo::webviewReceive(const void* buffer, uint32_t size) const noexcept
 {
-    if (!buffer || size == 0) return false;
-    const auto* bytes = static_cast<const uint8_t*>(buffer);
+    return ui.receiveBytes(buffer, size);
+}
+
+bool WebClapSawDemo::receiveMessage(std::string_view message) const noexcept
+{
+    const auto size = message.size();
+    if (size == 0) return false;
+    const auto* bytes = reinterpret_cast<const uint8_t*>(message.data());
     if (bytes[0] == readyCommand && size == 1)
         return sendAllParameters() && sendStatus();
 
@@ -171,7 +152,7 @@ bool WebClapSawDemo::sendParameter(clap_id id, double value) const noexcept
     message[0] = parameterChangedCommand;
     std::memcpy(message.data() + 1, &id, sizeof(id));
     std::memcpy(message.data() + 5, &value, sizeof(value));
-    return hostWebview && hostWebview->send(host, message.data(), message.size());
+    return ui.send({ reinterpret_cast<const char*>(message.data()), message.size() });
 }
 
 bool WebClapSawDemo::sendStatus() const noexcept
@@ -183,7 +164,7 @@ bool WebClapSawDemo::sendStatus() const noexcept
         dataCopyForUI.isProcessing.load(std::memory_order_relaxed));
     std::memcpy(message.data() + 1, &polyphony, sizeof(polyphony));
     std::memcpy(message.data() + 5, &processing, sizeof(processing));
-    return hostWebview && hostWebview->send(host, message.data(), message.size());
+    return ui.send({ reinterpret_cast<const char*>(message.data()), message.size() });
 }
 
 bool WebClapSawDemo::sendAllParameters() const noexcept
@@ -211,54 +192,44 @@ void WebClapSawDemo::requestUiUpdate() const noexcept
     if (host) host->request_callback(host);
 }
 
-void setResourceRoot(const char* path) { resourceRoot = path ? path : ""; }
-const std::string& getResourceRoot() { return resourceRoot; }
-
 bool ClapSawDemo::guiIsApiSupported(const char* api, bool isFloating) noexcept
 {
-    return !isFloating && api && std::strcmp(api, CLAP_WINDOW_API_WEBVIEW) == 0;
+    return static_cast<WebClapSawDemo&>(*this).ui.guiIsApiSupported(api, isFloating);
 }
 
 bool ClapSawDemo::guiGetPreferredApi(const char** api, bool* isFloating) noexcept
 {
-    if (!api || !isFloating) return false;
-    *api = CLAP_WINDOW_API_WEBVIEW;
-    *isFloating = false;
-    return true;
+    return static_cast<WebClapSawDemo&>(*this).ui.guiGetPreferredApi(api, isFloating);
 }
 
 bool ClapSawDemo::guiCreate(const char* api, bool isFloating) noexcept
 {
-    if (editor || !guiIsApiSupported(api, isFloating)) return false;
-    editor = new ClapSawDemoEditor;
+    auto& ui = static_cast<WebClapSawDemo&>(*this).ui;
+    if (editor || !ui.guiCreate(api, isFloating, 540, 324)) return false;
+    editor = new ClapSawDemoEditor { ui };
     return true;
 }
 
 void ClapSawDemo::guiDestroy() noexcept
 {
+    if (editor) editor->ui.guiDestroy();
     delete editor;
     editor = nullptr;
 }
 
 bool ClapSawDemo::guiSetParent(const clap_window* window) noexcept
 {
-    if (!editor || !window || !window->api
-        || std::strcmp(window->api, CLAP_WINDOW_API_WEBVIEW) != 0)
-        return false;
-    editor->parented = window->ptr == nullptr;
-    return editor->parented;
+    return editor && (editor->parented = editor->ui.guiSetParent(window));
 }
 
 bool ClapSawDemo::guiShow() noexcept
 {
-    return editor && editor->parented && (editor->visible = true);
+    return editor && editor->parented && editor->ui.guiShow();
 }
 
 bool ClapSawDemo::guiHide() noexcept
 {
-    if (!editor) return false;
-    editor->visible = false;
-    return true;
+    return editor && editor->ui.guiHide();
 }
 
 bool ClapSawDemo::guiSetScale(double) noexcept { return false; }
@@ -280,18 +251,12 @@ bool ClapSawDemo::guiAdjustSize(uint32_t* width, uint32_t* height) noexcept
 
 bool ClapSawDemo::guiSetSize(uint32_t width, uint32_t height) noexcept
 {
-    if (!editor) return false;
-    editor->width = width;
-    editor->height = height;
-    return true;
+    return editor && editor->ui.guiSetSize(width, height);
 }
 
 bool ClapSawDemo::guiGetSize(uint32_t* width, uint32_t* height) noexcept
 {
-    if (!editor || !width || !height) return false;
-    *width = editor->width;
-    *height = editor->height;
-    return true;
+    return editor && editor->ui.guiGetSize(width, height);
 }
 
 } // namespace sst::clap_saw_demo

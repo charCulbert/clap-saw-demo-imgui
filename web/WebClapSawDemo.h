@@ -2,7 +2,7 @@
 
 #include "clap-saw-demo.h"
 
-#include <clap/ext/draft/webview.h>
+#include <char_clap_utils/WebUI.h>
 
 #include <array>
 #include <atomic>
@@ -15,6 +15,7 @@ class WebClapSawDemo final : public ClapSawDemo
 {
 public:
     explicit WebClapSawDemo(const clap_host* host);
+    ~WebClapSawDemo();
 
     clap_process_status process(const clap_process* process) noexcept override;
     void paramsFlush(const clap_input_events*, const clap_output_events*) noexcept override;
@@ -30,6 +31,8 @@ protected:
     bool webviewReceive(const void* buffer, uint32_t size) const noexcept override;
 
 private:
+    friend struct ClapSawDemo;
+    bool receiveMessage(std::string_view message) const noexcept;
     bool sendParameter(clap_id id, double value) const noexcept;
     bool sendStatus() const noexcept;
     bool sendAllParameters() const noexcept;
@@ -37,12 +40,9 @@ private:
 
     const clap_host* host = nullptr;
     const clap_host_params* hostParams = nullptr;
-    const clap_host_webview* hostWebview = nullptr;
+    char_clap::WebUI ui;
     mutable std::atomic<bool> sendAllPending { false };
     mutable std::atomic<uint32_t> lastUiUpdate { 0 };
 };
-
-void setResourceRoot(const char* path);
-const std::string& getResourceRoot();
 
 } // namespace sst::clap_saw_demo

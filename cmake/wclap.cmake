@@ -33,7 +33,7 @@ add_custom_target(clap-saw-ui DEPENDS
 
 add_executable(clap-saw-wclap
     src/clap-saw-demo.cpp src/saw-voice.cpp web/WebClapSawDemo.cpp web/Entry.cpp)
-target_link_libraries(clap-saw-wclap PRIVATE clap clap-helpers)
+target_link_libraries(clap-saw-wclap PRIVATE clap clap-helpers char-clap-utils::char-clap-utils)
 target_include_directories(clap-saw-wclap PRIVATE src libs/readerwriterqueue)
 target_compile_definitions(clap-saw-wclap PRIVATE CLAP_SAW_WEB=1)
 target_compile_options(clap-saw-wclap PRIVATE -msimd128 -fno-exceptions
@@ -58,6 +58,8 @@ add_custom_target(wclap ALL
         "${web_clap_SOURCE_DIR}/LICENSE" "${bundle}/THIRD_PARTY_LICENSES/clap.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${web_clap_helpers_SOURCE_DIR}/LICENSE" "${bundle}/THIRD_PARTY_LICENSES/clap-helpers.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${char_clap_utils_SOURCE_DIR}/LICENSE" "${bundle}/THIRD_PARTY_LICENSES/char-clap-utils.txt"
     COMMAND ${CMAKE_COMMAND}
         "-DOUTPUT=${bundle}.tar.gz" -P "${CMAKE_SOURCE_DIR}/cmake/package-wclap.cmake"
     WORKING_DIRECTORY "${bundle}"

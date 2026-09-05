@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
+#include <string>
 #include <vector>
 #if defined(__APPLE__)
 #import <AppKit/AppKit.h>
@@ -69,10 +70,34 @@ int main(int argc, char** argv)
 
     if (web)
     {
+        std::array<char, 64> uri {}, mime {};
+        CHECK(web->get_uri(plugin, uri.data(), uri.size()) == 15
+              && !std::strcmp(uri.data(), "/ui/index.html"));
+        std::vector<uint8_t> resource;
+        const clap_ostream stream { &resource,
+            [](const clap_ostream* stream, const void* data, uint64_t size) -> int64_t {
+                auto& bytes = *static_cast<std::vector<uint8_t>*>(stream->ctx);
+                const auto* first = static_cast<const uint8_t*>(data);
+                bytes.insert(bytes.end(), first, first + size);
+                return static_cast<int64_t>(size);
+            }
+        };
+        CHECK(web->get_resource(plugin, uri.data(), mime.data(), mime.size(), &stream)
+              && !std::strcmp(mime.data(), "text/html") && !resource.empty());
+        resource.clear();
+        CHECK(web->get_resource(plugin, "/ui/test.wasm", mime.data(), mime.size(), &stream)
+              && !std::strcmp(mime.data(), "application/wasm")
+              && std::string(resource.begin(), resource.end()) == "wasm resource fixture");
+        CHECK(!web->get_resource(plugin, "/../test.wasm", mime.data(), mime.size(), &stream));
         CHECK(gui->create(plugin, CLAP_WINDOW_API_WEBVIEW, false));
         clap_window window {};
         window.api = CLAP_WINDOW_API_WEBVIEW;
         CHECK(gui->set_parent(plugin, &window) && gui->show(plugin));
+        uint32_t width = 0, height = 0;
+        CHECK(gui->get_size(plugin, &width, &height) && width == 540 && height == 324);
+        CHECK(gui->hide(plugin) && gui->show(plugin));
+        CHECK(gui->set_size(plugin, 600, 360));
+        CHECK(gui->get_size(plugin, &width, &height) && width == 600 && height == 360);
         const uint8_t ready = 1;
         CHECK(web->receive(plugin, &ready, 1) && messages.size() == 11);
         for (const uint8_t command : { 9, 10, 11 })
@@ -138,6 +163,11 @@ int main(int argc, char** argv)
     plugin->stop_processing(plugin);
     plugin->deactivate(plugin);
     gui->destroy(plugin);
+    if (web)
+    {
+        CHECK(gui->create(plugin, CLAP_WINDOW_API_WEBVIEW, false));
+        gui->destroy(plugin);
+    }
     plugin->destroy(plugin);
     entry->deinit();
     // Native rendering uses asynchronous platform callbacks; let the process unload it.

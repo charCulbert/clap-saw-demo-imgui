@@ -25,12 +25,10 @@ const clap_plugin_factory factory { pluginCount, pluginDescriptor, createPlugin 
 
 bool entryInit(const char* path)
 {
-    if (!path) return false;
-    setResourceRoot(path);
-    return true;
+    return char_clap::setResourceRoot(path);
 }
 
-void entryDeinit() { setResourceRoot(nullptr); }
+void entryDeinit() { char_clap::resourceRoot.clear(); }
 
 const void* entryGetFactory(const char* factoryId)
 {

@@ -46,6 +46,8 @@ The native build above keeps upstream's native renderer and pinned dependencies.
 The same editor controls and synth sources also build for the browser. Native
 window attachment lives in `src/clap-saw-demo-gui.cpp`; `web/` adapts the existing
 editor queues to WebView messages between the separate DSP and GUI Wasm modules.
+Resource serving, message transport and GUI lifecycle use `char_clap::WebUI`,
+with a local Wasm MIME override for the pinned helper version.
 
 Install WASI SDK with pthread support and put Emscripten's `em++` on `PATH`, then:
 
@@ -56,7 +58,7 @@ cmake --build build/wclap
 ```
 
 Load `build/wclap/artifacts/clap-saw-demo-imgui.wclap.tar.gz` in a WCLAP host.
-The web build downloads two pinned CLAP/header dependencies for the WebView draft;
+The web build downloads pinned CLAP, clap-helpers and char-clap-utils dependencies;
 it does not change the native dependency pins. Browser gamepad navigation is not supported.
 For native builds with CMake 4, also pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`
 for upstream's older readerwriterqueue CMake file.
