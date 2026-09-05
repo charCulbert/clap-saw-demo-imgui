@@ -5,19 +5,24 @@
 #ifndef CLAP_SAW_DEMO_EDITOR_H
 #define CLAP_SAW_DEMO_EDITOR_H
 #include "clap-saw-demo.h"
+#if !defined(CLAP_SAW_WEB)
 #include "imgui-clap-support/imgui-clap-editor.h"
+#endif
 #include <unordered_map>
 
 namespace sst::clap_saw_demo
 {
 
-struct ClapSawDemoEditor : public imgui_clap_editor
+struct ClapSawDemoEditor
+#if !defined(CLAP_SAW_WEB)
+    : public imgui_clap_editor
+#endif
 {
     ClapSawDemoEditor(ClapSawDemo::SynthToUI_Queue_t &, ClapSawDemo::UIToSynth_Queue_t &,
                       const ClapSawDemo::DataCopyForUI &, std::function<void()>);
     
     // Write your ImGui Code here
-    void onRender() override;
+    virtual void onRender();
     
     // GUI Helper functions
 

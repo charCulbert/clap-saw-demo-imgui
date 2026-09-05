@@ -24,6 +24,11 @@ endif()
 # Copy on mac (could expand to other platforms)
 option(COPY_AFTER_BUILD "Copy the clap to ~/Library on MACOS, ~/.clap on linux" FALSE)
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^wasm")
+    include(cmake/wclap.cmake)
+    return()
+endif()
+
 add_subdirectory(libs/clap EXCLUDE_FROM_ALL)
 add_subdirectory(libs/clap-helpers EXCLUDE_FROM_ALL)
 add_subdirectory(libs/readerwriterqueue EXCLUDE_FROM_ALL)
@@ -34,6 +39,7 @@ add_subdirectory(libs/clap-imgui-support EXCLUDE_FROM_ALL)
 add_library(${PROJECT_NAME} MODULE
         src/clap-saw-demo.cpp
         src/clap-saw-demo-editor.cpp
+        src/clap-saw-demo-gui.cpp
         src/saw-voice.cpp
         src/clap-saw-demo-pluginentry.cpp 
 )

@@ -253,6 +253,13 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
     bool implementsGui() const noexcept override { return true; }
     bool guiIsApiSupported(const char *api, bool isFloating) noexcept override;
 
+#if defined(CLAP_SAW_WEB)
+    bool guiGetPreferredApi(const char **api, bool *isFloating) noexcept override;
+    bool guiShow() noexcept override;
+    bool guiHide() noexcept override;
+    bool guiGetResizeHints(clap_gui_resize_hints *hints) noexcept override;
+#endif
+
     bool guiCreate(const char *api, bool isFloating) noexcept override;
     void guiDestroy() noexcept override;
     bool guiSetParent(const clap_window *window) noexcept override;

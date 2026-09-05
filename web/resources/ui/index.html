@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>CLAP Saw Demo ImGui</title>
+	<style>
+		html, body, canvas { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+		body { background: #141419; color: white; font: 14px system-ui; }
+		canvas { display: block; touch-action: none; }
+		#status { position: absolute; inset: 1rem; white-space: pre-wrap; }
+	</style>
+</head>
+<body>
+	<div id="status">Loading CLAP Saw ImGui UI…</div>
+	<canvas id="canvas" tabindex="0"></canvas>
+	<script src="clap-saw-ui.js"></script>
+	<script>
+		const canvas = document.querySelector("#canvas");
+		const status = document.querySelector("#status");
+		let uiModule;
+		canvas.addEventListener("touchstart", event => {
+			const touch = event.changedTouches[0];
+			canvas.dispatchEvent(new MouseEvent("mousemove", {
+				clientX: touch.clientX,
+				clientY: touch.clientY
+			}));
+		}, {capture: true});
+		addEventListener("message", event => {
+			const bytes = event.data instanceof ArrayBuffer
+				? new Uint8Array(event.data)
+				: ArrayBuffer.isView(event.data)
+					? new Uint8Array(event.data.buffer, event.data.byteOffset, event.data.byteLength)
+					: null;
+			if (!uiModule || !bytes) return;
+			const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+			if (bytes.length === 13 && bytes[0] === 12)
+				uiModule._setParameterValue(data.getUint32(1, true), data.getFloat64(5, true));
+			if (bytes.length === 9 && bytes[0] === 13)
+				uiModule._setPluginStatus(data.getInt32(1, true), data.getInt32(5, true));
+		});
+		createClapSawUi({
+			canvas,
+			printErr: message => status.textContent = message,
+			onAbort: reason => status.textContent = `CLAP Saw UI failed: ${reason}`
+		}).then(module => {
+			uiModule = module;
+			window.parent.postMessage(new Uint8Array([1]), "*");
+			status.remove();
+		})
+		  .catch(error => status.textContent = `CLAP Saw UI failed: ${error.message}`);
+	</script>
+</body>
+</html>

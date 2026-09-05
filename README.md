@@ -39,3 +39,37 @@ cmake -B build -G Xcode
 open build/clap-saw-demo-imgui.xcodeproj
 ```
 
+
+## WCLAP with a Wasm ImGui interface
+
+The native build above keeps upstream's native renderer and pinned dependencies.
+The same editor controls and synth sources also build for the browser. Native
+window attachment lives in `src/clap-saw-demo-gui.cpp`; `web/` adapts the existing
+editor queues to WebView messages between the separate DSP and GUI Wasm modules.
+
+Install WASI SDK with pthread support and put Emscripten's `em++` on `PATH`, then:
+
+```sh
+cmake -S . -B build/wclap -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$WASI_SDK_PATH/share/cmake/wasi-sdk-pthread.cmake"
+cmake --build build/wclap
+```
+
+Load `build/wclap/artifacts/clap-saw-demo-imgui.wclap.tar.gz` in a WCLAP host.
+The web build downloads two pinned CLAP/header dependencies for the WebView draft;
+it does not change the native dependency pins. Browser gamepad navigation is not supported.
+For native builds with CMake 4, also pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`
+for upstream's older readerwriterqueue CMake file.
+
+The macOS smoke check loads the actual native binary, attaches its Cocoa editor,
+and renders a note. It also checks the web adapter's parameter gestures and
+processing-thread UI snapshot:
+
+```sh
+cmake -S . -B build/native -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake --build build/native
+cmake -S tests -B build/tests -G Ninja \
+  -DNATIVE_PLUGIN="$PWD/build/native/clap-saw-demo-imgui.clap/Contents/MacOS/clap-saw-demo-imgui"
+cmake --build build/tests
+ctest --test-dir build/tests --output-on-failure
+```
