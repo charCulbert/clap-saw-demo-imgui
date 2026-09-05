@@ -62,16 +62,3 @@ The web build downloads pinned CLAP, clap-helpers and char-clap-utils dependenci
 it does not change the native dependency pins. Browser gamepad navigation is not supported.
 For native builds with CMake 4, also pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`
 for upstream's older readerwriterqueue CMake file.
-
-The macOS smoke check loads the actual native binary, attaches its Cocoa editor,
-and renders a note. It also checks the web adapter's parameter gestures and
-processing-thread UI snapshot:
-
-```sh
-cmake -S . -B build/native -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-cmake --build build/native
-cmake -S tests -B build/tests -G Ninja \
-  -DNATIVE_PLUGIN="$PWD/build/native/clap-saw-demo-imgui.clap/Contents/MacOS/clap-saw-demo-imgui"
-cmake --build build/tests
-ctest --test-dir build/tests --output-on-failure
-```
