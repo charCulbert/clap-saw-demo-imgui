@@ -58,6 +58,13 @@ cmake --build build/wclap
 ```
 
 Load `build/wclap/artifacts/clap-saw-demo-imgui.wclap.tar.gz` in a WCLAP host.
+The host needs WASI/shared-memory WCLAP support, `clap.webview/3` resource loading
+and binary messaging, the `clap.gui` `webview` lifecycle, parameter flushing and
+main-thread callbacks. The browser must support Wasm and WebGL2; the interface
+is a web UI and needs no native ImGui support from the host.
+Verified in WCLAP Browser DAW. Upstream's [browser-test-host at b42ade6](https://github.com/WebCLAP/browser-test-host/blob/b42ade615bef2c989f96400a7b0b2ef15cabd396/clap-audionode/clap-audioworkletprocessor.mjs#L282-L284)
+leaves the GUI lifecycle unimplemented and needs host-side changes for this build.
+
 The web build downloads pinned CLAP, clap-helpers and char-clap-utils dependencies;
 it does not change the native dependency pins. Browser gamepad navigation is not supported.
 For native builds with CMake 4, also pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`

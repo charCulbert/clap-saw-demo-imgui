@@ -36,7 +36,6 @@ private:
     bool sendParameter(clap_id id, double value) const noexcept;
     bool sendStatus() const noexcept;
     bool sendAllParameters() const noexcept;
-    void requestUiUpdate() const noexcept;
 
     const clap_host* host = nullptr;
     const clap_host_params* hostParams = nullptr;

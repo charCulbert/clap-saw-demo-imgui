@@ -17,19 +17,6 @@ constexpr uint8_t endEditCommand = 11;
 constexpr uint8_t parameterChangedCommand = 12;
 constexpr uint8_t statusChangedCommand = 13;
 
-constexpr std::array<clap_id, ClapSawDemo::nParams> parameterIds {
-    ClapSawDemo::pmUnisonCount,
-    ClapSawDemo::pmUnisonSpread,
-    ClapSawDemo::pmOscDetune,
-    ClapSawDemo::pmAmpAttack,
-    ClapSawDemo::pmAmpRelease,
-    ClapSawDemo::pmAmpIsGate,
-    ClapSawDemo::pmPreFilterVCA,
-    ClapSawDemo::pmCutoff,
-    ClapSawDemo::pmResonance,
-    ClapSawDemo::pmFilterMode,
-};
-
 } // namespace
 
 struct ClapSawDemoEditor
@@ -53,7 +40,7 @@ clap_process_status WebClapSawDemo::process(const clap_process* processIn) noexc
     const auto status = ClapSawDemo::process(processIn);
     if (toUiQ.size_approx() != 0
         || dataCopyForUI.updateCount.load(std::memory_order_relaxed) != lastUiUpdate.load())
-        requestUiUpdate();
+        host->request_callback(host);
     return status;
 }
 
@@ -61,14 +48,14 @@ void WebClapSawDemo::paramsFlush(const clap_input_events* in, const clap_output_
 {
     ClapSawDemo::paramsFlush(in, out);
     if (!dataCopyForUI.isProcessing.load()) sendAllPending.store(true);
-    requestUiUpdate();
+    host->request_callback(host);
 }
 
 bool WebClapSawDemo::stateLoad(const clap_istream* stream) noexcept
 {
     if (!ClapSawDemo::stateLoad(stream)) return false;
     sendAllPending.store(true, std::memory_order_release);
-    requestUiUpdate();
+    host->request_callback(host);
     return true;
 }
 
@@ -179,17 +166,14 @@ bool WebClapSawDemo::sendAllParameters() const noexcept
     }
 
     bool sent = true;
-    for (const auto id : parameterIds)
+    for (uint32_t index = 0; index < paramsCount(); ++index)
     {
+        clap_param_info info {};
+        if (!paramsInfo(index, &info)) return false;
         double value = 0;
-        sent = self.paramsValue(id, &value) && sendParameter(id, value) && sent;
+        sent = self.paramsValue(info.id, &value) && sendParameter(info.id, value) && sent;
     }
     return sent;
-}
-
-void WebClapSawDemo::requestUiUpdate() const noexcept
-{
-    if (host) host->request_callback(host);
 }
 
 bool ClapSawDemo::guiIsApiSupported(const char* api, bool isFloating) noexcept
