@@ -285,10 +285,28 @@ bool ClapSawDemo::paramsTextToValue(clap_id paramId, const char *display, double
         return true;
         break;
     }
-        // Skip these two. You get the idea
-    case pmFilterMode:
     case pmAmpIsGate:
+        if (strcmp(display, "AEG On") == 0)
+            *value = 0;
+        else if (strcmp(display, "AEG Bypassed") == 0)
+            *value = 1;
+        else
+            return false;
+        return true;
+    case pmFilterMode:
+    {
+        static constexpr const char *names[] = {"LowPass", "HighPass", "BandPass",
+                                                "Notch", "Peak", "AllPass"};
+        for (auto i = 0U; i < std::size(names); ++i)
+        {
+            if (strcmp(display, names[i]) == 0)
+            {
+                *value = i;
+                return true;
+            }
+        }
         return false;
+    }
         break;
     }
 
@@ -910,7 +928,7 @@ float ClapSawDemo::scaleSecondsToTimeParam(float seconds)
     // scaletime = (param - 2 / 3) * 6 so
     // param = scaleTime / 6 + 2/ 3
 
-    auto param = scaleTime / 6 * 2.0 / 3.0;
+    auto param = scaleTime / 6 + 2.0 / 3.0;
     return param;
 }
 
@@ -983,7 +1001,7 @@ bool ClapSawDemo::stateLoad(const clap_istream *stream) noexcept
         items.push_back(l);
     }
 
-    if (items[0] != "STREAM-VERSION-1")
+    if (items.empty() || items[0] != "STREAM-VERSION-1")
     {
         _DBGCOUT << "Invalid stream" << std::endl;
         return false;
