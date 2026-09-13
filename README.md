@@ -58,8 +58,6 @@ cmake --build build/wclap
 
 Load `build/wclap/artifacts/clap-saw-demo-imgui.wclap.tar.gz` in your host.
 
-The build downloads pinned dependencies, including
-[char-clap-utils](https://github.com/charCulbert/char-clap-utils).
 Native dependencies are unchanged.
 
 ### Host support
@@ -75,8 +73,5 @@ The host must support:
 - Parameter flushing and main-thread callbacks.
 
 Upstream's [browser-test-host at b42ade6](https://github.com/WebCLAP/browser-test-host/blob/b42ade615bef2c989f96400a7b0b2ef15cabd396/clap-audionode/clap-audioworkletprocessor.mjs#L282-L284)
-does not yet implement that GUI lifecycle, so it needs changes to run this build.
-Browser gamepad navigation is not supported.
+does not yet implement that GUI lifecycle, so it needs to implement some clap GUI lifecycle stuff to run this build.
 
-For native builds with CMake 4, add `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`
-to the configure command for upstream's older readerwriterqueue dependency.
